@@ -33,12 +33,12 @@ namespace CastleGrimtol.Project
             resembling a lecture room of sorts. It's hard to see what's down there.."); //5
             Room room6 = new Room("Western Corridor", @"You wander through the doorway and into a hallway. This seems like a
             booby trap waiting to happen. It's hard to see what's at the very end of the hallway.."); //6
-            // Room room7 = new Room("Room 7", "Room 7 Description"); //7 trap
-            // Room room8 = new Room("Room 8", "Room 8 Description"); //8 trap
-            Room roomTop = new Room("Treasure Room", @"Can it be? A room lined with walls of plated gold and gems
-            embedded into the walls. The flames refract soft golden light in all directions. Most likely a tomb of
-            an ancient great leader, now just a treasure chest waiting to be found. Now it has been! Best keep this
-            secret to yourself!"); //9
+            Room room7 = new Room("COLLAPSING CHAMBER", "THE ROOM IS COLLAPSING"); //7 trap
+            Room room8 = new Room("SNAKE PIT", "A PIT FULL OF SNAKES."); //8 trap
+            Room roomTop = new Room("Treasure Room", @"Can it be? A room lined with walls of plated gold and gems embedded
+            into the walls. The flames refract soft golden light in all directions. Most likely a 
+            tomb of an ancient great leader, now just a treasure chest waiting to be found. Now it has
+            been! Best keep this secret to yourself! You feel a heavy draft from above.."); //9
             Room outside = new Room("Outside", @"Congradulations! You've escaped with the hidden treasure! Your trusted
             steed, Benny the Puma has been waiting for you patiently at the top of the pyramid. It's 
             like he could smell you through the vents. You better go home and shower..."); //10
@@ -49,14 +49,13 @@ namespace CastleGrimtol.Project
             room3.Directions["up"] = room4;
             room3.Directions["right"] = room5;
             room4.Directions["up"] = roomTop;
-            // roomTop.Directions["up"] = outside;
             room3.Directions["right"] = room5;
             room3.Directions["left"] = room2;
             room5.Directions["right"] = room6;
             room5.Directions["left"] = room3;
             room6.Directions["left"] = room5;
-            // room6.Directions["right"] = room7; //trap
-            // room5.Directions["down"] = room8;  //trap
+            room5.Directions["down"] = room8;
+            room6.Directions["right"] = room7;
 
             //Types of room items:
             Item torch = new Item("torch", "set fire to the rain", true);
@@ -96,11 +95,23 @@ namespace CastleGrimtol.Project
             {
                 if (choice.Contains("torch"))
                 {
-                    TakeItem("torch");
+                    Item torch = CurrentPlayer.Inventory.Find(t => t.Name == "torch");
+                    if (CurrentPlayer.Inventory.Contains(torch))
+                    {
+                        PrintRoom(CurrentRoom, @"You already have a reusable torch.");
+                    }
+                    else
+                    {
+                        TakeItem("torch");
+                    }
                 }
                 else if (choice.Contains("ceramic"))
                 {
-                    TakeItem("ceramic jar");
+                    PrintRoom(CurrentRoom, $@"You can't take this item.");
+                }
+                else if (choice.Contains("chest"))
+                {
+                    UseItem("chest");
                 }
                 else if (choice.Contains("coins"))
                 {
@@ -124,6 +135,14 @@ namespace CastleGrimtol.Project
                 }
                 else if (choice.Contains("ceramic"))
                 {
+                    foreach (Item item in CurrentRoom.Items.ToList())
+                    {
+                        if ("ceramic jar" == item.Name)
+                        {
+                            int index = CurrentRoom.Items.IndexOf(item);
+                            CurrentRoom.Items.RemoveAt(index);
+                        }
+                    }
                     UseItem("ceramic jar");
                 }
                 else if (choice.Contains("coins"))
@@ -133,6 +152,10 @@ namespace CastleGrimtol.Project
                 else if (choice.Contains("dagger"))
                 {
                     UseItem("dagger");
+                }
+                else if (choice.Contains("chest"))
+                {
+                    UseItem("chest");
                 }
                 else if (choice.Contains("treasure"))
                 {
@@ -201,7 +224,19 @@ namespace CastleGrimtol.Project
             }
             else if (itemName == "dagger" && CurrentRoom.Name == "Central Pyramid")
             {
-                //kill the mummy
+                //kill the mummy?
+            }
+            else if (itemName == "torch" && CurrentRoom.Name == "Western Wing")
+            {
+                Item chest = new Item("chest", "possible treasure chest", false);
+                CurrentRoom.Items.Add(chest);
+                PrintRoom(CurrentRoom, $@"The light from the torch illuminates a chest in the center of the room. Could it 
+                be what you've been looking for?");
+
+            }
+            else if (itemName == "chest" && CurrentRoom.Name == "Western Wing")
+            {
+                SnakePit();
             }
             else if (itemName == "treasure" && CurrentRoom.Name == "Top")
             {
@@ -228,9 +263,10 @@ namespace CastleGrimtol.Project
                         int index = CurrentPlayer.Inventory.IndexOf(item);
                         //remove from inventory
                         CurrentPlayer.Inventory.RemoveAt(index);
+                        PrintRoom(CurrentRoom, $@"You've used {itemName} by throwing them away. What a waste.");
+                        return;
                     }
                 }
-                PrintRoom(CurrentRoom, $@"You've used {itemName} by throwing them away. What a waste.");
             }
             // FOR NON REUSABLE ITEMS:
             // foreach (Item item in CurrentPlayer.Inventory.ToList())
@@ -245,7 +281,7 @@ namespace CastleGrimtol.Project
         }
         public void PrintRoom(Room currentRoom, string message)
         {
-            if (currentRoom.Name != "Outside")
+            if (currentRoom.Name != "Outside" && currentRoom.Name != "SNAKE PIT" && currentRoom.Name != "COLLAPSING CHAMBER")
             {
                 Console.Clear();
 
@@ -264,7 +300,7 @@ namespace CastleGrimtol.Project
             ----------------------------------------------------------------------------------------
             ROOM NAME: {currentRoom.Name} | 
             ROOM DESCRIPTION: {currentRoom.Description}
-            Score: {CurrentPlayer.Score}
+            SCORE: {CurrentPlayer.Score}
             ITEMS IN ROOM: ");
                 foreach (Item item in CurrentRoom.Items)
                 {
@@ -288,6 +324,85 @@ namespace CastleGrimtol.Project
                 // }
                 System.Console.WriteLine($@"
             ----------------------------------------------------------------------------------------");
+            }
+            else if (currentRoom.Name == "SNAKE PIT")
+            {
+                Console.Clear();
+
+                System.Console.WriteLine($@"
+            =======================================================================================
+                         _____                                                  _____
+                        _|_[]|_                                                _|[]_|_
+                      _/_/_|=\_\_                                            _/_/=|_\_\_
+                    _/_ /_ |==\ _\_                                        _/_ /==| _\ _\_
+                  _/__ /_ _|===\ __\_          PYRAMID PLUNDER           _/__ /===|_ _\ __\_
+                _/_ _ /___ |====\  __\_                                _/_ _ /====| ___\  __\_
+              _/ __ _/___ _|=====\ ___ \_                            _/ __ _/=====|_ ___\ ___ \_
+            _/ ___ _/ ____ |======\_  __ \_                        _/ ___ _/======| ____ \_  __ \_
+            =======================================================================================
+            MESSAGE: Oh no! A booby trap! You've fallen into the snake pit! What a 
+                     pitty... The vipers relentlessly strike until you die a
+                     painful death...
+            ----------------------------------------------------------------------------------------
+            ROOM NAME: {currentRoom.Name} | 
+            ROOM DESCRIPTION: {currentRoom.Description}
+            SCORE: {CurrentPlayer.Score}
+            ITEMS IN ROOM: ");
+                foreach (Item item in CurrentRoom.Items)
+                {
+                    System.Console.WriteLine($@"
+                {item.Name}");
+                }
+                System.Console.WriteLine($@"
+            YOUR INVENTORY: ");
+                foreach (Item item in CurrentPlayer.Inventory)
+                {
+                    System.Console.WriteLine($@"
+                {item.Name}");
+                }
+                System.Console.WriteLine($@"
+            ----------------------------------------------------------------------------------------");
+                LoseGame();
+            }
+            else if (currentRoom.Name == "COLLAPSING CHAMBER")
+            {
+                Console.Clear();
+
+                System.Console.WriteLine($@"
+            =======================================================================================
+                         _____                                                  _____
+                        _|_[]|_                                                _|[]_|_
+                      _/_/_|=\_\_                                            _/_/=|_\_\_
+                    _/_ /_ |==\ _\_                                        _/_ /==| _\ _\_
+                  _/__ /_ _|===\ __\_          PYRAMID PLUNDER           _/__ /===|_ _\ __\_
+                _/_ _ /___ |====\  __\_                                _/_ _ /====| ___\  __\_
+              _/ __ _/___ _|=====\ ___ \_                            _/ __ _/=====|_ ___\ ___ \_
+            _/ ___ _/ ____ |======\_  __ \_                        _/ ___ _/======| ____ \_  __ \_
+            =======================================================================================
+            MESSAGE: Oh no! A booby trap! The room has locked behind you
+                    and is closing in on you. Your vision starts to fade as 
+                    the stone quietly squeezes you as you breath your
+                    last breath.
+            ----------------------------------------------------------------------------------------
+            ROOM NAME: {currentRoom.Name} | 
+            ROOM DESCRIPTION: {currentRoom.Description}
+            SCORE: {CurrentPlayer.Score}
+            ITEMS IN ROOM: ");
+                foreach (Item item in CurrentRoom.Items)
+                {
+                    System.Console.WriteLine($@"
+                {item.Name}");
+                }
+                System.Console.WriteLine($@"
+            YOUR INVENTORY: ");
+                foreach (Item item in CurrentPlayer.Inventory)
+                {
+                    System.Console.WriteLine($@"
+                {item.Name}");
+                }
+                System.Console.WriteLine($@"
+            ----------------------------------------------------------------------------------------");
+                LoseGame();
             }
             else
             {
@@ -308,6 +423,7 @@ namespace CastleGrimtol.Project
             ----------------------------------------------------------------------------------------
             ROOM NAME: {currentRoom.Name} | 
             ROOM DESCRIPTION: {currentRoom.Description}
+            SCORE: {CurrentPlayer.Score}
             ITEMS IN ROOM: ");
                 foreach (Item item in CurrentRoom.Items)
                 {
@@ -321,14 +437,6 @@ namespace CastleGrimtol.Project
                     System.Console.WriteLine($@"
                 {item.Name}");
                 }
-                // How to cheat the system (if you have a map):
-                // System.Console.WriteLine($@"
-                // DIRECTIONS: ");
-                // foreach (string dir in currentRoom.Directions.Keys)
-                // {
-                //     System.Console.WriteLine($@"
-                //     {dir}");
-                // }
                 System.Console.WriteLine($@"
             ----------------------------------------------------------------------------------------");
                 WinGame();
@@ -337,12 +445,7 @@ namespace CastleGrimtol.Project
         //No need to Pass a room since Items can only be used in the CurrentRoom
         public void TakeItem(string itemName)
         {
-            //take item from room 
-            // if (itemName == "ceramic jar")
-            // {
-            //     PrintRoom(CurrentRoom, $@"It appears you have upset the ghostly figure
-            //     in the corner and it is now chasing after you! Run! Quick!");
-            // }
+            Item torch = CurrentPlayer.Inventory.Find(t => t.Name == "torch");
             if (itemName != "treasure")
             {
                 foreach (Item item in CurrentRoom.Items.ToList())
@@ -358,7 +461,11 @@ namespace CastleGrimtol.Project
                 CurrentPlayer.Score += 10;
                 PrintRoom(CurrentRoom, $"Item {itemName} successfully taken");
             }
-            else
+            else if (itemName == "chest" && CurrentRoom.Name == "Western Wing")
+            {
+                SnakePit();
+            }            
+            else if (itemName == "treasure" && CurrentRoom.Name == "Treasure Room")
             {
                 foreach (Item item in CurrentRoom.Items.ToList())
                 {
@@ -376,21 +483,45 @@ namespace CastleGrimtol.Project
             like he could smell you through the vents. You better go home and shower...");
                 CurrentRoom.Directions["up"] = outside;
                 CurrentPlayer.Score += 100;
+                PrintRoom(CurrentRoom, $@"As you steal the treasure, you see a stone fall through the ceiling.
+                Sunlight becomes visible, and the smell of fresh air fills your nostrils.");
+            }
+            else
+            {
+                foreach (Item item in CurrentRoom.Items.ToList())
+                {
+                    if (itemName == item.Name)
+                    {
+                        int index = CurrentRoom.Items.IndexOf(item);
+                        CurrentRoom.Items.RemoveAt(index);
+                        //add to inventory
+                        CurrentPlayer.Inventory.Add(item);
+                    }
+                }
+                //     Room top = Rooms.Find(r => r.Name == "Top");
+                //     Room outside = new Room("Outside", @"Congradulations! You've escaped with the hidden treasure! Your trusted
+                // steed, Benny the Puma has been waiting for you patiently at the top of the pyramid. It's 
+                // like he could smell you through the vents. You better go home and shower...");
+                //     CurrentRoom.Directions["up"] = outside;
+                //     CurrentPlayer.Score += 100;
                 PrintRoom(CurrentRoom, $"Item {itemName} successfully taken");
             }
         }
         public void SnakePit()
         {
-            System.Console.WriteLine(@"
-            You've fallen into the snake pit! What a pitty... The vipers 
-            relentlessly strike until you die.");
+            PrintRoom(CurrentRoom, @"
+            Oh no! A booby trap! You've fallen into the snake pit! What a 
+            pitty... The vipers relentlessly strike until you die a
+            painful death...");
             LoseGame();
         }
         public void ClosedIn()
         {
-            System.Console.WriteLine(@"
-                The room has locked behind you and is closing in on you. Ouch you die");
-            LoseGame();
+            PrintRoom(CurrentRoom, @"
+                Oh no! A booby trap! The room has locked behind you
+                and is closing in on you. Your vision starts to fade as 
+                the stone quietly squeezes you as you breath your
+                last breath.");
         }
         public void Navigate(string dir, List<Item> inventory)
         {
@@ -426,18 +557,12 @@ namespace CastleGrimtol.Project
                         }
                     }
                 }
-                // if (CurrentPlayer.Inventory.Contains(item))
-                // {
-                // }
-                // TreasureCheck();
-
             }
-
-            else if ((CurrentRoom.Name == "Room 6") && (dir == "right"))
+            else if ((CurrentRoom.Name == "Western Corridor") && (dir == "right"))
             {
                 ClosedIn();
             }
-            else if ((CurrentRoom.Name == "Room 6") && (dir == "down"))
+            else if ((CurrentRoom.Name == "Western Wing") && (dir == "down"))
             {
                 SnakePit();
             }
